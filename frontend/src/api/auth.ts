@@ -27,11 +27,11 @@ export async function register(input: RegisterInput): Promise<User> {
 export async function logout(): Promise<void> {
   const tokens = tokenStore.get()
   tokenStore.clear()
-  if (tokens) {
+  if (!tokens) return
+  try {
+    await http.request('/api/auth/logout', { method: 'POST', body: { refresh: tokens.refresh }, auth: false })
+  } catch {
     // Best effort: the local session is already gone even if the server is unreachable.
-    await http
-      .request('/api/auth/logout', { method: 'POST', body: { refresh: tokens.refresh }, auth: false })
-      .catch(() => undefined)
   }
 }
 
