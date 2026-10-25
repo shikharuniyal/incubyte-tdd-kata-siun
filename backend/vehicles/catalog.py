@@ -1,11 +1,12 @@
 """Use cases for the vehicle catalogue: adding listings and resolving makes/models."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from decimal import Decimal
 from uuid import UUID
 
 from django.db import transaction
 
+from dealership import audit
 from dealership.errors import Conflict
 from dealership.models import (
     AppUser,
@@ -62,6 +63,7 @@ def add_vehicle(
             event_type=InventoryEvent.Type.ACQUIRED,
             request_key=stock.new_request_key(f"create:{listing.listing_id}"),
         )
+    _audit(actor, "vehicle.created", listing, quantity=quantity, price=price)
     return listing
 
 
@@ -88,6 +90,8 @@ def update_vehicle(*, actor: AppUser, listing_id: UUID, changes: VehicleChanges)
     if changes.condition:
         listing.condition_class = changes.condition
     listing.save(update_fields=["vehicle_model", "advertised_price", "condition_class"])
+    changed = [field for field, value in asdict(changes).items() if value is not None]
+    _audit(actor, "vehicle.updated", listing, changed=changed)
     return listing
 
 
@@ -97,10 +101,19 @@ def delete_vehicle(*, actor: AppUser, listing_id: UUID) -> None:
     listing = stock.lock_listing(listing_id)
     policies.require_admin(actor, listing.dealership_id)
 
-    stock.remove_available_units(listing, actor=actor, request_key=stock.new_request_key(f"delete:{listing_id}"))
+    removed = stock.remove_available_units(
+        listing, actor=actor, request_key=stock.new_request_key(f"delete:{listing_id}")
+    )
     listing.status = VehicleListing.Status.ARCHIVED
     listing.deleted_at = stock.now()
     listing.save(update_fields=["status", "deleted_at"])
+    _audit(actor, "vehicle.deleted", listing, removed_units=removed)
+
+
+def _audit(actor: AppUser, action: str, listing: VehicleListing, **details) -> None:
+    audit.record(
+        actor=actor, action=action, entity_type="vehicle_listing", entity_id=listing.listing_id, **details
+    )
 
 
 def _apply_model_changes(listing: VehicleListing, changes: VehicleChanges) -> None:

@@ -3,6 +3,7 @@
 from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError, transaction
 
+from dealership import audit
 from dealership.models import AppUser, Customer, Party, Person
 
 
@@ -50,6 +51,7 @@ def register_user(*, first_name: str, last_name: str, email: str, password: str)
             user.save(force_insert=True)
     except IntegrityError as exc:  # Lost a race with a concurrent registration.
         raise EmailAlreadyRegistered from exc
+    audit.record(actor=user, action="user.registered", entity_type="app_user", entity_id=user.user_id)
     return user
 
 
