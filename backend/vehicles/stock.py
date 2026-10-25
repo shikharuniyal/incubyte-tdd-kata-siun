@@ -17,7 +17,6 @@ from uuid import UUID
 from django.db import transaction
 from django.utils import timezone
 
-from dealership import audit
 from dealership.errors import Conflict, NotFound, OutOfStock, ValidationFailed
 from dealership.models import (
     Acquisition,
@@ -31,7 +30,7 @@ from dealership.models import (
     VehicleListing,
 )
 
-from . import policies
+from . import history, policies
 
 PLACEHOLDER_VIN_PREFIX = "PENDING-"
 
@@ -87,14 +86,7 @@ def purchase(*, buyer: AppUser, listing_id: UUID, idempotency_key: str | None = 
         available_quantity_delta=-1,
         idempotency_key=request_key,
     )
-    audit.record(
-        actor=buyer,
-        action="vehicle.purchased",
-        entity_type="vehicle_listing",
-        entity_id=listing.listing_id,
-        sale_id=sale.sale_id,
-        stock_number=unit.stock_number,
-    )
+    history.record(buyer, "vehicle.purchased", listing, sale_id=sale.sale_id, stock_number=unit.stock_number)
     return sale
 
 
@@ -125,13 +117,7 @@ def restock(
         request_key=request_key,
         unit_cost=unit_cost,
     )
-    audit.record(
-        actor=actor,
-        action="vehicle.restocked",
-        entity_type="vehicle_listing",
-        entity_id=listing.listing_id,
-        added=quantity,
-    )
+    history.record(actor, "vehicle.restocked", listing, added=quantity)
     return quantity
 
 

@@ -6,7 +6,6 @@ from uuid import UUID
 
 from django.db import transaction
 
-from dealership import audit
 from dealership.errors import Conflict
 from dealership.models import (
     AppUser,
@@ -21,7 +20,7 @@ from dealership.models import (
     VehicleModel,
 )
 
-from . import policies, stock
+from . import history, policies, stock
 
 
 @dataclass(frozen=True)
@@ -63,7 +62,7 @@ def add_vehicle(
             event_type=InventoryEvent.Type.ACQUIRED,
             request_key=stock.new_request_key(f"create:{listing.listing_id}"),
         )
-    _audit(actor, "vehicle.created", listing, quantity=quantity, price=price)
+    history.record(actor, "vehicle.created", listing, quantity=quantity, price=price)
     return listing
 
 
@@ -91,7 +90,7 @@ def update_vehicle(*, actor: AppUser, listing_id: UUID, changes: VehicleChanges)
         listing.condition_class = changes.condition
     listing.save(update_fields=["vehicle_model", "advertised_price", "condition_class"])
     changed = [field for field, value in asdict(changes).items() if value is not None]
-    _audit(actor, "vehicle.updated", listing, changed=changed)
+    history.record(actor, "vehicle.updated", listing, changed=changed)
     return listing
 
 
@@ -107,13 +106,7 @@ def delete_vehicle(*, actor: AppUser, listing_id: UUID) -> None:
     listing.status = VehicleListing.Status.ARCHIVED
     listing.deleted_at = stock.now()
     listing.save(update_fields=["status", "deleted_at"])
-    _audit(actor, "vehicle.deleted", listing, removed_units=removed)
-
-
-def _audit(actor: AppUser, action: str, listing: VehicleListing, **details) -> None:
-    audit.record(
-        actor=actor, action=action, entity_type="vehicle_listing", entity_id=listing.listing_id, **details
-    )
+    history.record(actor, "vehicle.deleted", listing, removed_units=removed)
 
 
 def _apply_model_changes(listing: VehicleListing, changes: VehicleChanges) -> None:

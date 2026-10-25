@@ -1,0 +1,9 @@
+[run]
+source = accounts, vehicles, dealership, config
+omit =
+    */migrations/*
+    config/wsgi.py
+
+[report]
+show_missing = true
+skip_empty = true
