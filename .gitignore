@@ -1,0 +1,27 @@
+# Local database data (each developer runs their own Postgres cluster)
+pgdata/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Secrets and local config
+.env
+*.local
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
