@@ -1,3 +1,5 @@
+import re
+
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -50,6 +52,39 @@ class VehicleUpdateSerializer(serializers.Serializer):
     def validate(self, attrs):
         if "quantity" in self.initial_data:
             raise serializers.ValidationError({"quantity": [self.QUANTITY_MESSAGE]})
+        return attrs
+
+
+class RestockSerializer(serializers.Serializer):
+    """Give a quantity, a list of VINs, or both (then they must agree)."""
+
+    # 17 characters; the letters I, O and Q are never used in VINs.
+    VIN_PATTERN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
+
+    quantity = serializers.IntegerField(min_value=1, max_value=MAX_UNITS_PER_REQUEST, required=False)
+    vins = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False, allow_empty=False, max_length=MAX_UNITS_PER_REQUEST
+    )
+    unit_cost = serializers.DecimalField(required=False, default=0, **PRICE)
+
+    def validate_vins(self, value: list[str]) -> list[str]:
+        vins = [vin.strip().upper() for vin in value]
+        invalid = [vin for vin in vins if not self.VIN_PATTERN.match(vin)]
+        if invalid:
+            raise serializers.ValidationError(
+                f"Invalid VIN(s): {', '.join(invalid)}. A VIN has 17 letters and digits and never I, O or Q."
+            )
+        if len(set(vins)) != len(vins):
+            raise serializers.ValidationError("Each VIN may appear only once.")
+        return vins
+
+    def validate(self, attrs):
+        quantity, vins = attrs.get("quantity"), attrs.get("vins")
+        if quantity is None and vins is None:
+            raise serializers.ValidationError({"quantity": ["Give a quantity or a list of VINs."]})
+        if quantity is not None and vins is not None and quantity != len(vins):
+            raise serializers.ValidationError({"quantity": ["Quantity must match the number of VINs."]})
+        attrs["quantity"] = quantity if quantity is not None else len(vins)
         return attrs
 
 

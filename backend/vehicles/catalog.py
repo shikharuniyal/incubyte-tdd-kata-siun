@@ -57,6 +57,7 @@ def add_vehicle(
         stock.receive_units(
             listing,
             count=quantity,
+            vins=None,
             actor=actor,
             event_type=InventoryEvent.Type.ACQUIRED,
             request_key=stock.new_request_key(f"create:{listing.listing_id}"),
