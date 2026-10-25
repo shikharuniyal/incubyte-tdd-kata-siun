@@ -82,7 +82,7 @@ describe('api client', () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(409, { detail: 'Toyota Corolla is out of stock.' }))
     const api = createApiClient({ tokens: memoryStore(), fetchImpl })
 
-    const error = await api.request('/api/vehicles/1/purchase', { method: 'POST' }).catch((e) => e)
+    const error = (await api.request('/api/vehicles/1/purchase', { method: 'POST' }).catch((e: unknown) => e)) as ApiError
 
     expect(error).toBeInstanceOf(ApiError)
     expect(error.status).toBe(409)
@@ -93,7 +93,7 @@ describe('api client', () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(400, { email: ['An account with this email already exists.'] }))
     const api = createApiClient({ tokens: memoryStore(), fetchImpl })
 
-    const error = await api.request('/api/auth/register', { method: 'POST', body: {}, auth: false }).catch((e) => e)
+    const error = (await api.request('/api/auth/register', { method: 'POST', body: {}, auth: false }).catch((e: unknown) => e)) as ApiError
 
     expect(error.fieldErrors).toEqual({ email: ['An account with this email already exists.'] })
     expect(error.message).toBe('An account with this email already exists.')

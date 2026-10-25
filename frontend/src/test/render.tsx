@@ -2,7 +2,7 @@ import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { vi } from 'vitest'
-import { AuthContext, type AuthContextValue } from '../auth/AuthContext'
+import { AuthContext, type AuthContextValue } from '../auth/context'
 import { ToastProvider } from '../components/ui/Toast'
 import type { User } from '../types'
 

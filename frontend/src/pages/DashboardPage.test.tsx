@@ -43,7 +43,7 @@ describe('DashboardPage', () => {
     await userEvent.click(within(await screen.findByRole('article', { name: 'Toyota Corolla' })).getByRole('button', { name: /purchase/i }))
 
     expect(api.purchaseVehicle).toHaveBeenCalledWith(corolla.id)
-    expect(await within(card('Toyota Corolla')).findByText('2 in stock')).toBeInTheDocument()
+    expect(await within(card('Toyota Corolla')).findByText('Only 2 left')).toBeInTheDocument()
     expect(await screen.findByText(/you bought a toyota corolla/i)).toBeInTheDocument()
   })
 
