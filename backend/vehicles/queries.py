@@ -1,5 +1,6 @@
 """Read side: vehicles as the API shows them, built on the vehicle_inventory view."""
 
+from decimal import Decimal
 from uuid import UUID
 
 from django.db.models import F, OuterRef, QuerySet, Subquery
@@ -20,6 +21,29 @@ def inventory() -> QuerySet[VehicleInventory]:
         )
         .order_by("make", "model_name", "price", "id")
     )
+
+
+def search(
+    *,
+    make: str | None = None,
+    model: str | None = None,
+    category: str | None = None,
+    min_price: Decimal | None = None,
+    max_price: Decimal | None = None,
+) -> QuerySet[VehicleInventory]:
+    """Case-insensitive partial matches on text; inclusive price bounds. Filters combine."""
+    vehicles = inventory()
+    if make:
+        vehicles = vehicles.filter(make__icontains=make)
+    if model:
+        vehicles = vehicles.filter(model_name__icontains=model)
+    if category:
+        vehicles = vehicles.filter(category__icontains=category)
+    if min_price is not None:
+        vehicles = vehicles.filter(price__gte=min_price)
+    if max_price is not None:
+        vehicles = vehicles.filter(price__lte=max_price)
+    return vehicles
 
 
 def get_vehicle(listing_id: UUID) -> VehicleInventory:

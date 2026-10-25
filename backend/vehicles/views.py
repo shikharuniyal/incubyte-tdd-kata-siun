@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import catalog, queries
-from .serializers import VehicleCreateSerializer, VehicleSerializer
+from .serializers import VehicleCreateSerializer, VehicleSearchSerializer, VehicleSerializer
 
 
 def vehicle_response(listing_id, status_code=status.HTTP_200_OK) -> Response:
@@ -36,3 +36,12 @@ class VehicleCollectionView(APIView):
             dealership_id=data.get("dealership_id"),
         )
         return vehicle_response(listing.listing_id, status.HTTP_201_CREATED)
+
+
+class VehicleSearchView(APIView):
+    """GET /api/vehicles/search?make=&model=&category=&min_price=&max_price="""
+
+    def get(self, request):
+        filters = VehicleSearchSerializer(data=request.query_params)
+        filters.is_valid(raise_exception=True)
+        return Response(VehicleSerializer(queries.search(**filters.validated_data), many=True).data)

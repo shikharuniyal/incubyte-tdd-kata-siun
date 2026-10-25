@@ -34,6 +34,20 @@ class VehicleCreateSerializer(serializers.Serializer):
         return attrs
 
 
+class VehicleSearchSerializer(serializers.Serializer):
+    make = serializers.CharField(required=False, max_length=100)
+    model = serializers.CharField(required=False, max_length=100)
+    category = serializers.CharField(required=False, max_length=50)
+    min_price = serializers.DecimalField(required=False, **PRICE)
+    max_price = serializers.DecimalField(required=False, **PRICE)
+
+    def validate(self, attrs):
+        low, high = attrs.get("min_price"), attrs.get("max_price")
+        if low is not None and high is not None and low > high:
+            raise serializers.ValidationError({"min_price": ["min_price cannot be greater than max_price."]})
+        return attrs
+
+
 class VehicleSerializer(serializers.Serializer):
     """How a vehicle (listing + derived quantity) is shown to API clients."""
 
