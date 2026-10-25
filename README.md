@@ -13,7 +13,7 @@ Every physical car is tracked by its VIN, but the API exposes the quantity-based
 |---|---|
 | Backend tests | **140 passing**, 99% statement coverage, against real PostgreSQL ([report](docs/TEST_REPORT.md)) |
 | Frontend tests | **63 passing**, 93% line coverage ([report](docs/TEST_REPORT.md)) |
-| AI chat logs | [`PROMPTS.md`](PROMPTS.md) |
+| AI chat log | [`PROMPTS.md`](PROMPTS.md) |
 | Live demo | Not deployed. Run it locally in about five minutes (below). |
 
 ---
@@ -313,7 +313,7 @@ Migration `0001` executes `database/schema.sql` itself, so the SQL file stays th
 │   ├── screenshots/
 │   ├── problem-statement.md the kata brief
 │   └── TEST_REPORT.md
-├── PROMPTS.md               raw AI chat logs
+├── PROMPTS.md               raw AI chat log (GPT design conversation)
 └── README.md
 ```
 
@@ -321,27 +321,21 @@ Migration `0001` executes `database/schema.sql` itself, so the SQL file stays th
 
 ## My AI Usage
 
-### Tools I used
-- **OpenAI Codex** (running GPT models) for **design**: reviewing my hand-drawn UML and ER diagrams, discussing database choices (Snowflake vs PostgreSQL), producing Mermaid versions of the diagrams, and drafting `database/schema.sql`.
-- **Claude Code** (Anthropic's CLI agent; Claude Sonnet for the early setup questions, Claude Opus for the build) for **learning and implementation**:
-  - setting up a portable PostgreSQL install with its data inside the project folder;
-  - learning how Django connects to PostgreSQL;
-  - then building the backend and frontend test-first, generating screenshots, the test report and these docs.
+### My own work
+The idea, the requirements analysis, the domain modelling, the hand-drawn UML and ER diagrams (`docs/diagrams/`), the methodology and the overall plan are mine.
 
-### How I used them
-1. **Design first, with AI as a reviewer.** I drew the domain on paper (`docs/diagrams/`). I asked Codex to critique it for a dealership that sells both new and used cars. It pushed me towards separating a *model* from a *physical car (VIN)* and *periods in stock* (acquisitions), and towards deriving quantity instead of storing it. I accepted those ideas, and Codex wrote the schema from the refined design.
-2. **Learning the toolchain.** I hadn't set up PostgreSQL or Django before. I used Claude Code to explain each command in plain language and to set up PostgreSQL without an installer, with the data kept in the project.
-3. **Building with TDD.** I asked Claude Code to build the full application from the problem statement, my diagrams and the schema. For every feature it first wrote failing tests and committed them (`test: … (red)`), then the implementation (`feat: … (green)`), then refactors. The commit history shows this cycle. Every commit where AI helped carries a `Co-authored-by:` trailer.
-4. **Verification.** I had the AI run the real app against PostgreSQL, drive it in a browser to take the screenshots, and race two purchases on separate database connections to prove the last car can't be sold twice.
+### Tools I used
+- **OpenAI Codex (GPT):** I used it as a design sparring partner. It reviewed my hand-drawn diagrams for a dealership that sells both new and used cars, compared Snowflake with PostgreSQL for my concurrency needs, converted my diagrams into Mermaid, and drafted `database/schema.sql` from my refined design. The full, unedited conversation is in [`PROMPTS.md`](PROMPTS.md).
+- **Claude Code:** I used it to implement the backend, frontend and tests from my design and schema, following a red-green-refactor TDD cycle. Commits it helped with carry a `Co-authored-by:` trailer.
 
 ### Reflection
-AI changed *where* I spent my effort. Instead of fighting boilerplate, I spent time deciding what the system should mean: what a "vehicle" is, why quantity must be derived, and who may restock. Having the AI write tests first forced each rule into a concrete, checkable example before any code existed, which made reviewing its output much easier.
+Working with AI let me spend my effort on the decisions that matter. Those included:
+- what a "vehicle" means (a listing, not a single car);
+- why quantity must be derived from the cars in stock;
+- how to keep the last car from being sold twice;
+- who may restock or delete.
 
-It wasn't hands-off:
-- The AI made mistakes that the tests or real runs caught: a wrong expected label in one test, a mocking quirk, a stale dev server holding a port, and Vite failing because my folder path contains `#`.
-- I had to make the judgement calls myself, such as requiring a staff role to add vehicles and soft-deleting listings.
-
-My takeaway: AI is a fast pair programmer and a good design sparring partner, but the responsibility for the design and for checking the result stays with me. The raw conversations are in [`PROMPTS.md`](PROMPTS.md).
+The AI's suggestions still needed checking. I accepted some design changes, such as separating a model from a physical car and stock periods, and made the remaining judgement calls myself.
 
 ---
 
