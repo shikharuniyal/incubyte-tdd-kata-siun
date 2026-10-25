@@ -28,17 +28,23 @@ export function VehicleFilters({ value, categories, onChange }: VehicleFiltersPr
           </Button>
         )}
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <TextField label="Make" placeholder="e.g. Toyota" value={value.make} onChange={set('make')} autoComplete="off" />
-        <TextField label="Model" placeholder="e.g. Creta" value={value.model} onChange={set('model')} autoComplete="off" />
-        <SelectField label="Category" value={value.category} onChange={set('category')}>
-          <option value="">All categories</option>
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </SelectField>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="col-span-2 sm:col-span-1">
+          <TextField label="Make" placeholder="e.g. Toyota" value={value.make} onChange={set('make')} autoComplete="off" />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
+          <TextField label="Model" placeholder="e.g. Creta" value={value.model} onChange={set('model')} autoComplete="off" />
+        </div>
+        <div className="col-span-2 lg:col-span-1">
+          <SelectField label="Category" value={value.category} onChange={set('category')}>
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </SelectField>
+        </div>
         <TextField
           label="Min price"
           type="number"
