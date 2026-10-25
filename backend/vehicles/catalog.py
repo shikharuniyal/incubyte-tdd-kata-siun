@@ -1,0 +1,86 @@
+"""Use cases for the vehicle catalogue: adding listings and resolving makes/models."""
+
+from dataclasses import dataclass
+from decimal import Decimal
+from uuid import UUID
+
+from django.db import transaction
+
+from dealership.models import (
+    AppUser,
+    Dealership,
+    InventoryEvent,
+    Make,
+    Manufacturer,
+    Organization,
+    Party,
+    VehicleListing,
+    VehicleModel,
+)
+
+from . import policies, stock
+
+
+@dataclass(frozen=True)
+class VehicleSpec:
+    """What identifies the kind of car being listed."""
+
+    make: str
+    model: str
+    category: str
+    model_year: int
+    variant: str = "BASE"
+
+
+@transaction.atomic
+def add_vehicle(
+    *,
+    actor: AppUser,
+    spec: VehicleSpec,
+    price: Decimal,
+    quantity: int,
+    condition: str = VehicleListing.Condition.NEW,
+    currency_code: str = "INR",
+    dealership_id: UUID | None = None,
+) -> VehicleListing:
+    dealership_id = policies.resolve_staff_dealership(actor, dealership_id)
+    listing = VehicleListing.objects.create(
+        dealership=Dealership.objects.get(dealership_id=dealership_id),
+        vehicle_model=resolve_model(spec),
+        condition_class=condition,
+        advertised_price=price,
+        currency_code=currency_code,
+    )
+    if quantity:
+        stock.receive_units(
+            listing,
+            count=quantity,
+            actor=actor,
+            event_type=InventoryEvent.Type.ACQUIRED,
+            request_key=stock.new_request_key(f"create:{listing.listing_id}"),
+        )
+    return listing
+
+
+def resolve_model(spec: VehicleSpec) -> VehicleModel:
+    """Find the make/model matching the spec (case-insensitively) or create it."""
+    make = Make.objects.filter(name__iexact=spec.make).first() or _create_make(spec.make)
+    model, created = VehicleModel.objects.get_or_create(
+        make=make,
+        name__iexact=spec.model,
+        model_year=spec.model_year,
+        variant__iexact=spec.variant,
+        defaults={"name": spec.model, "variant": spec.variant, "category": spec.category},
+    )
+    if not created and model.category != spec.category:
+        model.category = spec.category
+        model.save(update_fields=["category"])
+    return model
+
+
+def _create_make(name: str) -> Make:
+    """A make the system has not seen yet; record its manufacturer as an organisation."""
+    party = Party.objects.create(party_type=Party.Type.ORGANIZATION, display_name=name)
+    organization = Organization.objects.create(party=party, registered_name=name)
+    manufacturer = Manufacturer.objects.create(organization=organization)
+    return Make.objects.create(manufacturer=manufacturer, name=name)
