@@ -34,6 +34,25 @@ class VehicleCreateSerializer(serializers.Serializer):
         return attrs
 
 
+class VehicleUpdateSerializer(serializers.Serializer):
+    """Partial update: only the fields sent are changed."""
+
+    QUANTITY_MESSAGE = "Quantity follows the cars in stock; use the purchase or restock endpoints."
+
+    make = NonBlankCharField(max_length=100, required=False)
+    model = NonBlankCharField(max_length=100, required=False)
+    category = NonBlankCharField(max_length=50, required=False)
+    model_year = serializers.IntegerField(min_value=1900, max_value=2200, required=False)
+    variant = NonBlankCharField(max_length=50, required=False)
+    price = serializers.DecimalField(required=False, **PRICE)
+    condition = serializers.ChoiceField(choices=VehicleListing.Condition.choices, required=False)
+
+    def validate(self, attrs):
+        if "quantity" in self.initial_data:
+            raise serializers.ValidationError({"quantity": [self.QUANTITY_MESSAGE]})
+        return attrs
+
+
 class VehicleSearchSerializer(serializers.Serializer):
     make = serializers.CharField(required=False, max_length=100)
     model = serializers.CharField(required=False, max_length=100)

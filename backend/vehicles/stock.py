@@ -11,9 +11,12 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from uuid import UUID
+
 from django.db import transaction
 from django.utils import timezone
 
+from dealership.errors import NotFound
 from dealership.models import (
     Acquisition,
     AppUser,
@@ -25,6 +28,24 @@ from dealership.models import (
 )
 
 PLACEHOLDER_VIN_PREFIX = "PENDING-"
+
+
+def lock_listing(listing_id: UUID) -> VehicleListing:
+    """
+    Load an active listing and lock its row until the transaction ends.
+
+    FOR NO KEY UPDATE serialises stock changes on one listing (purchase,
+    restock, delete) without blocking inserts that merely reference it.
+    """
+    listing = (
+        VehicleListing.objects.select_for_update(no_key=True, of=("self",))
+        .select_related("vehicle_model__make", "dealership")
+        .filter(listing_id=listing_id, status=VehicleListing.Status.ACTIVE, deleted_at__isnull=True)
+        .first()
+    )
+    if listing is None:
+        raise NotFound("Vehicle not found.")
+    return listing
 
 
 @transaction.atomic
@@ -68,6 +89,27 @@ def receive_units(
         )
         received.append(unit)
     return received
+
+
+def remove_available_units(listing: VehicleListing, *, actor: AppUser, request_key: str) -> int:
+    """Take every unsold car of a listing out of stock. Returns how many were removed."""
+    at = timezone.now()
+    units = listing.acquisitions.select_for_update().filter(inventory_status=Acquisition.Status.AVAILABLE)
+    removed = 0
+    for index, unit in enumerate(units.order_by("acquired_at", "stock_number")):
+        unit.inventory_status = Acquisition.Status.REMOVED
+        unit.closed_at = at
+        unit.save(update_fields=["inventory_status", "closed_at"])
+        InventoryEvent.objects.create(
+            acquisition=unit,
+            listing=listing,
+            performed_by=actor,
+            event_type=InventoryEvent.Type.REMOVED,
+            available_quantity_delta=-1,
+            idempotency_key=f"{request_key}:{index}",
+        )
+        removed += 1
+    return removed
 
 
 def transfer_ownership(vehicle: Vehicle, *, to: Party, reason: str, at: datetime) -> None:
