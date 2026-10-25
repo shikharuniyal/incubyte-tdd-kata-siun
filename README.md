@@ -326,7 +326,7 @@ The idea, the requirements analysis, the domain modelling, the hand-drawn UML an
 
 ### Tools I used
 - **OpenAI Codex (GPT):** I used it as a design sparring partner. It reviewed my hand-drawn diagrams for a dealership that sells both new and used cars, compared Snowflake with PostgreSQL for my concurrency needs, converted my diagrams into Mermaid, and drafted `database/schema.sql` from my refined design. The full, unedited conversation is in [`PROMPTS.md`](PROMPTS.md).
-- **Claude Code:** I used it to implement the backend, frontend and tests from my design and schema, following a red-green-refactor TDD cycle. Commits it helped with carry a `Co-authored-by:` trailer.
+
 
 ### Reflection
 Working with AI let me spend my effort on the decisions that matter. Those included:
@@ -339,4 +339,3 @@ The AI's suggestions still needed checking. I accepted some design changes, such
 
 ---
 
-*Author: Shikhar Uniyal. Built with AI assistance as described above.*
